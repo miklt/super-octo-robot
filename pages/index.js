@@ -1,6 +1,6 @@
-import * as React from "react";
-import { ethers } from "ethers";
 
+import { ethers } from "ethers";
+import React, {useEffect} from 'react'
 export default function App() {
   const checkIfWalletIsConnected = () => {
     /*
@@ -20,7 +20,7 @@ export default function App() {
   */
   useEffect(() => { 
     checkIfWalletIsConnected();
-  }, [])
+  }, []);
   const wave = () => {
     
   }
