@@ -8,6 +8,7 @@ import moment from 'moment'
 export default function App() {
   const [currentAccount, setCurrentAccount] = useState('')
   const [allWaves, setAllWaves] = useState([])
+  const [loading, setLoading] = useState(false)
   const contractAddress = '0x8D7F7F9f9448Dbdbb439d05684AD2374A34F5D1F'
   /**
    * Form related code.
@@ -123,7 +124,6 @@ export default function App() {
 
   const wave = async (message) => {
     try {
-      console.log(message, 'mensagem do wave...')
       const { ethereum } = window
 
       if (ethereum) {
@@ -142,10 +142,10 @@ export default function App() {
           gasLimit: 300000,
         })
         console.log('Mining...', waveTxn.hash)
-
+        setLoading(true)
         await waveTxn.wait()
         console.log('Mined -- ', waveTxn.hash)
-
+        setLoading(false)
         count = await wavePortalContract.getTotalWaves()
         console.log('Retrieved total wave count...', count.toNumber())
       } else {
@@ -159,9 +159,12 @@ export default function App() {
   /*
    * This runs our function when the page loads.
    */
-  useEffect(async () => {
-    await checkIfWalletIsConnected()
-    await getAllWaves()
+  useEffect(() => {
+    async function getData() {
+      await checkIfWalletIsConnected()
+      await getAllWaves()
+    }
+    getData()
   }, [])
 
   return (
@@ -201,10 +204,16 @@ export default function App() {
             Connect Wallet
           </button>
         )}
+        {loading ? (
+          <div className="w-1/2 p-2 mt-2 font-mono bg-yellow-300">
+            Please wait for the transaction to be mined
+          </div>
+        ) : (
+          <div></div>
+        )}
         {allWaves
           .sort((a, b) => b.timestamp - a.timestamp)
           .map((wave, index) => {
-            console.log(wave.isLucky, 'luck')
             return (
               <div key={index} className="w-1/2 p-4 mt-3 bg-yellow-100">
                 <div className="font-semibold">📣: {wave.message}</div>
