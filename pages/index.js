@@ -178,7 +178,8 @@ export default function App() {
         </div>
         <form className="flex flex-col w-1/3" onSubmit={formik.handleSubmit}>
           <label htmlFor="message" className="font-semibold">
-            Try to send me a message, maybe you're lucky and get some ETH...
+            Try to send me a message and, if your're lucky, you could get some
+            ETH...
           </label>
           <input
             id="message"
