@@ -1,11 +1,28 @@
 import { ethers } from 'ethers'
 import React, { useEffect, useState } from 'react'
 import wavePortal from '../utils/WavePortal.json'
+import { useFormik } from 'formik'
+import * as Yup from 'yup'
+import moment from 'moment'
 
 export default function App() {
   const [currentAccount, setCurrentAccount] = useState('')
   const [allWaves, setAllWaves] = useState([])
-  const contractAddress = '0xaFbB7bA6CAF85d18eE9d99E7A61AcD3E15DfEc72'
+  const contractAddress = '0x8D7F7F9f9448Dbdbb439d05684AD2374A34F5D1F'
+  /**
+   * Form related code.
+   */
+  const formik = useFormik({
+    initialValues: { message: '' },
+    validationSchema: Yup.object({
+      message: Yup.string().required('Message Required'),
+    }),
+    onSubmit: (values) => {
+      wave(values.message)
+      formik.resetForm()
+    },
+  })
+
   /*
    * Create a method that gets all waves from your contract
    */
@@ -18,7 +35,7 @@ export default function App() {
         const signer = provider.getSigner()
         const wavePortalContract = new ethers.Contract(
           contractAddress,
-          contractABI,
+          wavePortal.abi,
           signer
         )
 
@@ -30,6 +47,7 @@ export default function App() {
             address: wave.waver,
             timestamp: new Date(wave.timestamp * 1000),
             message: wave.message,
+            isLucky: wave.isLucky,
           })
         })
 
@@ -38,23 +56,27 @@ export default function App() {
         /**
          * Listen in for emitter events!
          */
-        wavePortalContract.on('NewWave', (from, timestamp, message) => {
-          console.log('NewWave', from, timestamp, message)
+        wavePortalContract.on(
+          'NewWave',
+          (from, timestamp, message, isLucky) => {
+            //console.log('NewWave', from, timestamp, message, isLucky)
 
-          setAllWaves((prevState) => [
-            ...prevState,
-            {
-              address: from,
-              timestamp: new Date(timestamp * 1000),
-              message: message,
-            },
-          ])
-        })
+            setAllWaves((prevState) => [
+              ...prevState,
+              {
+                address: from,
+                timestamp: new Date(timestamp * 1000),
+                message: message,
+                isLucky: isLucky,
+              },
+            ])
+          }
+        )
       } else {
         console.log("Ethereum object doesn't exist!")
       }
     } catch (error) {
-      console.log(error)
+      console.log(error, 'error message')
     }
   }
   const checkIfWalletIsConnected = async () => {
@@ -101,7 +123,7 @@ export default function App() {
 
   const wave = async (message) => {
     try {
-      console.log(message)
+      console.log(message, 'mensagem do wave...')
       const { ethereum } = window
 
       if (ethereum) {
@@ -137,8 +159,9 @@ export default function App() {
   /*
    * This runs our function when the page loads.
    */
-  useEffect(() => {
-    checkIfWalletIsConnected()
+  useEffect(async () => {
+    await checkIfWalletIsConnected()
+    await getAllWaves()
   }, [])
 
   return (
@@ -150,13 +173,26 @@ export default function App() {
           I am Michelet and I work at the University of São Paulo, so that's
           cool, right? Connect your Ethereum wallet and wave at me!
         </div>
-        <input type="text" />
-        <button
-          className="px-4 py-1 text-sm font-semibold text-red-600 border border-red-200 rounded-full hover:text-white hover:bg-red-600 hover:border-transparent focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2"
-          onClick={wave}
-        >
-          Wave at Me
-        </button>
+        <form className="flex flex-col w-1/3" onSubmit={formik.handleSubmit}>
+          <label htmlFor="message" className="font-semibold">
+            Try to send me a message, maybe you're lucky and get some ETH...
+          </label>
+          <input
+            id="message"
+            className="w-full px-2 border border-yellow-800 "
+            type="text"
+            {...formik.getFieldProps('message')}
+          />
+          {formik.touched.message && formik.errors.message ? (
+            <div className="text-red-600">{formik.errors.message}</div>
+          ) : null}
+          <button
+            type="submit"
+            className="px-4 py-1 text-sm font-semibold text-red-600 border border-red-200 rounded-full hover:text-white hover:bg-red-600 hover:border-transparent focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2"
+          >
+            Wave at Me
+          </button>
+        </form>
         {/*
          * If there is no currentAccount render this button
          */}
@@ -165,22 +201,26 @@ export default function App() {
             Connect Wallet
           </button>
         )}
-        {allWaves.map((wave, index) => {
-          return (
-            <div
-              key={index}
-              style={{
-                backgroundColor: 'OldLace',
-                marginTop: '16px',
-                padding: '8px',
-              }}
-            >
-              <div>Address: {wave.address}</div>
-              <div>Time: {wave.timestamp.toString()}</div>
-              <div>Message: {wave.message}</div>
-            </div>
-          )
-        })}
+        {allWaves
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .map((wave, index) => {
+            console.log(wave.isLucky, 'luck')
+            return (
+              <div key={index} className="w-1/2 p-4 mt-3 bg-yellow-100">
+                <div className="font-semibold">📣: {wave.message}</div>
+                <div
+                  className={
+                    wave.isLucky ? 'text-sm text-green-600 ' : 'text-sm'
+                  }
+                >
+                  From {wave.isLucky ? 'Lucky:' : ':'} {wave.address}
+                </div>
+                <div className="text-xs">
+                  {moment(wave.timestamp.toISOString()).fromNow()}
+                </div>
+              </div>
+            )
+          })}
       </div>
     </div>
   )
